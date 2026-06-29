@@ -35,49 +35,32 @@ class FunFactService {
 		}
 	}
 
-	// TODO [Basic] Implementasikan metode untuk menghasilkan fun fact tentang sayuran
-	// TODO [Basic] Tambahkan validasi untuk maksimum panjang input dan pembersihan input terhadap karakter khusus untuk mengatasi prompt injection
-	// TODO [Advanced] Gunakan parameter `tone` untuk variasi personalitas
+	// TODO [Basic] Implementasikan metode untuk menghasilkan fun fact
 	async generateFunFact(vegetable, tone = 'normal') {
-		if (!this.isModelLoaded || this.isGenerating) {
-			throw new Error('Model belum siap atau sedang menghasilkan fakta');
+		if (!this.isModelLoaded || !this.generator) {
+			throw new Error('Model belum dimuat');
 		}
 
-		if (!vegetable || typeof vegetable !== 'string') {
-			throw new Error('Nama sayuran yang valid diperlukan');
+		if (this.isGenerating) {
+			throw new Error('Proses generasi sedang berjalan');
 		}
+
+		this.isGenerating = true;
+		const fallbackFact = this.getSourceFact(vegetable);
 
 		try {
-			this.isGenerating = true;
+			const cleanVegetable = String(vegetable || '').trim();
+			const sourceFact = fallbackFact;
 
-			const cleanVegetable = vegetable
-				.slice(0, this.config.maxInputLength)
-				.replace(/[^a-zA-Z\s-]/g, '')
-				.trim();
+			const prompt = `Rewrite this verified vegetable fact in English with a ${tone} tone. Keep the meaning accurate and under 35 words. Vegetable: ${cleanVegetable}. Fact: ${sourceFact}`;
 
-			if (!cleanVegetable) {
-				throw new Error('Nama sayuran tidak valid');
-			}
+			const output = await this.generator(prompt, this.config.generationConfig);
+			const generatedText = output[0]?.generated_text || '';
 
-			const toneInstruction = {
-				normal: 'friendly and clear',
-				funny: 'playful and funny',
-				professional: 'professional and concise',
-				casual: 'casual and warm'
-			}[tone] || 'friendly and clear';
-			const sourceFact = this.getSourceFact(cleanVegetable);
-
-			const prompt = `Rewrite this verified vegetable fact in Indonesian with a ${toneInstruction} tone. Keep the meaning accurate and under 35 words. Vegetable: ${cleanVegetable}. Fact: ${sourceFact}`;
-
-			const result = await this.generator(prompt, this.config.generationConfig);
-			const generatedText = Array.isArray(result)
-				? result[0]?.generated_text
-				: result?.generated_text;
-
-			return this.cleanGeneratedText(generatedText, cleanVegetable, sourceFact);
+			return this.cleanGeneratedText(generatedText, cleanVegetable, fallbackFact);
 		} catch (error) {
-			logError('Error generating fun fact', error);
-			throw new Error(`Failed to generate fun fact: ${error.message}`);
+			logError('Gagal melakukan generasi teks', error);
+			return fallbackFact;
 		} finally {
 			this.isGenerating = false;
 		}
@@ -85,27 +68,27 @@ class FunFactService {
 
 	getSourceFact(vegetable) {
 		const sourceFacts = {
-			Beetroot: 'Beetroot mengandung betalain, pigmen alami yang memberi warna merah pekat dan sering dipakai sebagai pewarna makanan alami.',
-			Paprika: 'Paprika merah biasanya lebih manis daripada paprika hijau karena matang lebih lama di tanaman.',
-			Cabbage: 'Kubis bisa berubah warna saat dimasak tergantung tingkat keasaman air atau bahan yang digunakan.',
-			Carrot: 'Wortel oranye populer karena kaya beta-karoten, senyawa yang dapat diubah tubuh menjadi vitamin A.',
-			Cauliflower: 'Kembang kol sebenarnya adalah kumpulan bakal bunga yang belum mekar dan tumbuh rapat membentuk kepala putih.',
-			Chilli: 'Rasa pedas cabai berasal dari capsaicin, senyawa yang memicu sensor panas di lidah.',
-			Corn: 'Setiap helai rambut jagung biasanya terhubung ke satu biji jagung di tongkolnya.',
-			Cucumber: 'Mentimun memiliki kandungan air sangat tinggi, sehingga terasa segar dan sering dipakai untuk hidrasi ringan.',
-			eggplant: 'Terong termasuk keluarga nightshade, masih satu kerabat dengan tomat dan kentang.',
-			Garlic: 'Bawang putih menghasilkan aroma kuat ketika selnya rusak, misalnya saat dicincang atau dihancurkan.',
-			Ginger: 'Jahe yang biasa digunakan di dapur adalah rimpang, yaitu batang yang tumbuh di bawah tanah.',
-			Lettuce: 'Selada romaine memiliki daun yang lebih kokoh, sehingga sering dipakai untuk salad yang tetap renyah.',
-			Onion: 'Saat bawang dipotong, senyawa belerangnya dapat bereaksi dan membuat mata terasa perih.',
-			Peas: 'Kacang polong muda terasa manis karena gulanya belum banyak berubah menjadi pati.',
-			Potato: 'Kentang berasal dari daerah Andes dan kini menjadi salah satu bahan pangan paling penting di dunia.',
-			Turnip: 'Lobak turnip bisa dimakan bagian umbi dan daunnya, sehingga cukup serbaguna di dapur.',
-			Soybean: 'Kedelai kaya protein nabati dan menjadi bahan dasar tempe, tahu, susu kedelai, serta kecap.',
-			Spinach: 'Bayam dikenal cepat layu saat dipanaskan karena struktur daunnya tipis dan banyak mengandung air.'
+			Beetroot: 'Beetroots contain betalains, which give them their deep red color and are powerful antioxidants.',
+			Paprika: 'Red paprikas or bell peppers are actually fully ripened green peppers and are much sweeter.',
+			Cabbage: 'Cabbage can change its color to bright red when cooked with acidic ingredients like vinegar.',
+			Carrot: 'Carrots were originally purple or yellow before orange varieties became popular in the 17th century.',
+			Cauliflower: 'The head of a cauliflower is made of tightly packed undeveloped flower buds.',
+			Chilli: 'Chili peppers get their spicy heat from capsaicin, which protects them from being eaten by mammals.',
+			Corn: 'An average ear of corn always has an even number of rows, usually around 16 rows.',
+			Cucumber: 'Cucumbers are composed of about 95 percent water, making them incredibly hydrating.',
+			eggplant: 'Eggplants are technically berries and belong to the same nightshade family as tomatoes.',
+			Garlic: 'Garlic releases its strong pungent aroma only when its cells are crushed or chopped.',
+			Ginger: 'Ginger is not a root but a rhizome, an underground stem that stores nutrients for the plant.',
+			Lettuce: 'Lettuce was one of the first vegetables to be successfully grown in space by astronauts.',
+			Onion: 'Onions release a gas called syn-propanethial-S-oxide when cut, which stimulates tear glands.',
+			Peas: 'Peas are ancient vegetables that have been cultivated by humans for thousands of years.',
+			Potato: 'Potatoes were the first vegetable to be grown in space aboard the Space Shuttle Columbia.',
+			Turnip: 'Turnips are ancient root vegetables, and both the root and the green leaves are edible.',
+			Soybean: 'Soybeans are an excellent plant-based source of complete protein containing all essential amino acids.',
+			Spinach: 'Spinach is packed with iron and vitamins, though its leaves shrink significantly when cooked.'
 		};
 
-		return sourceFacts[vegetable] || `${vegetable} punya karakter rasa dan nutrisi yang unik, sehingga sering menjadi bahan fleksibel dalam banyak masakan.`;
+		return sourceFacts[vegetable] || `${vegetable} has a unique flavor and nutritional profile, making it a versatile ingredient in many dishes.`;
 	}
 
 	cleanGeneratedText(text, vegetable, fallbackFact) {
@@ -132,12 +115,7 @@ class FunFactService {
 		const vegetableWords = vegetable.toLowerCase().split(/\s+/);
 		const mentionsVegetable = vegetableWords.some(word => text.toLowerCase().includes(word));
 
-		return uniqueWords.size >= 8 && repeatedWords <= Math.floor(words.length * 0.45) && mentionsVegetable;
-	}
-
-	// TODO [Basic] Periksa apakah model siap dan tidak sedang menghasilkan fakta
-	isReady() {
-		return Boolean(this.isModelLoaded && this.generator && !this.isGenerating);
+		return uniqueWords.size >= 8 && repeatedWords <= words.length * 0.4 && mentionsVegetable;
 	}
 }
 
