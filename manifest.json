@@ -24,13 +24,13 @@
   ],
   "screenshots": [
     {
-      "src": "screenshots/mobile.png",
-      "sizes": "324x915",
+      "src": "assets/screenshots/mobile.png",
+      "sizes": "324x730",
       "type": "image/png",
       "form_factor": "narrow"
     },
     {
-      "src": "screenshots/desktop.png",
+      "src": "assets/screenshots/desktop.png",
       "sizes": "1265x712",
       "type": "image/png",
       "form_factor": "wide"
