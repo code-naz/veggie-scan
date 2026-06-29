@@ -19,8 +19,8 @@ workbox.precaching.precacheAndRoute([
 	{ url: './assets/icons/apple-touch-icon.png', revision: '1' },
 	{ url: './assets/icons/icon-192x192.png', revision: '1' },
 	{ url: './assets/icons/icon-512x512.png', revision: '1' },
-	{ url: './screenshots/mobile.png', revision: '1' },
-	{ url: './screenshots/desktop.png', revision: '1' }
+	{ url: './assets/screenshots/mobile.png', revision: '1' },
+	{ url: './assets/screenshots/desktop.png', revision: '1' }
 ]);
 
 workbox.routing.registerRoute(
