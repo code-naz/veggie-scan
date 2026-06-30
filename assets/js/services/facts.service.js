@@ -59,7 +59,7 @@ class FunFactService {
 				throw new Error('Nama sayuran tidak valid');
 			}
 
-			const prompt = `Fact about ${cleanVegetable}:`;
+			const prompt = `Describe vegetable ${cleanVegetable}:`;
 
 			const result = await this.generator(prompt, this.config.generationConfig);
 			const generatedText = Array.isArray(result)

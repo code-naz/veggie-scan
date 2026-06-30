@@ -7,7 +7,7 @@ export const APP_CONFIG = {
   modelPath: './model/model.json',
   metadataPath: './model/metadata.json',
   imageSize: 224,
-  funFactModel: 'Xenova/flan-t5-small',
+  funFactModel: 'Xenova/LaMini-Flan-T5-77M',
   maxInputLength: 40,
   stableDetectionFrames: 8,
   scanAreaInset: 0.18,
