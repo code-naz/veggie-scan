@@ -13,10 +13,10 @@ export const APP_CONFIG = {
   scanAreaInset: 0.18,
   predictionMarginThreshold: 12,
   generationConfig: {
-    temperature: 0.2,
+    temperature: 0.7,
     max_new_tokens: 120,
-    top_p: 0.8,
-    do_sample: false
+    top_p: 0.9,
+    do_sample: true
   }
 };
 

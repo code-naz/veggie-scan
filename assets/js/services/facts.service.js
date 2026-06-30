@@ -35,32 +35,42 @@ class FunFactService {
 		}
 	}
 
-	// TODO [Basic] Implementasikan metode untuk menghasilkan fun fact
+	// TODO [Basic] Implementasikan metode untuk menghasilkan fun fact tentang sayuran
+	// TODO [Basic] Tambahkan validasi untuk maksimum panjang input dan pembersihan input terhadap karakter khusus untuk mengatasi prompt injection
+	// TODO [Advanced] Gunakan parameter `tone` untuk variasi personalitas
 	async generateFunFact(vegetable, tone = 'normal') {
-		if (!this.isModelLoaded || !this.generator) {
-			throw new Error('Model belum dimuat');
+		if (!this.isModelLoaded || this.isGenerating) {
+			throw new Error('Model belum siap atau sedang menghasilkan fakta');
 		}
 
-		if (this.isGenerating) {
-			throw new Error('Proses generasi sedang berjalan');
+		if (!vegetable || typeof vegetable !== 'string') {
+			throw new Error('Nama sayuran yang valid diperlukan');
 		}
-
-		this.isGenerating = true;
-		const fallbackFact = this.getSourceFact(vegetable);
 
 		try {
-			const cleanVegetable = String(vegetable || '').trim();
-			const sourceFact = fallbackFact;
+			this.isGenerating = true;
 
-			const prompt = `Rewrite this verified vegetable fact in English with a ${tone} tone. Keep the meaning accurate and under 35 words. Vegetable: ${cleanVegetable}. Fact: ${sourceFact}`;
+			const cleanVegetable = vegetable
+				.slice(0, this.config.maxInputLength)
+				.replace(/[^a-zA-Z\s-]/g, '')
+				.trim();
 
-			const output = await this.generator(prompt, this.config.generationConfig);
-			const generatedText = output[0]?.generated_text || '';
+			if (!cleanVegetable) {
+				throw new Error('Nama sayuran tidak valid');
+			}
 
+			const prompt = `Fact about ${cleanVegetable}:`;
+
+			const result = await this.generator(prompt, this.config.generationConfig);
+			const generatedText = Array.isArray(result)
+				? result[0]?.generated_text
+				: result?.generated_text;
+
+			const fallbackFact = this.getSourceFact(cleanVegetable);
 			return this.cleanGeneratedText(generatedText, cleanVegetable, fallbackFact);
 		} catch (error) {
-			logError('Gagal melakukan generasi teks', error);
-			return fallbackFact;
+			logError('Error generating fun fact', error);
+			throw new Error(`Failed to generate fun fact: ${error.message}`);
 		} finally {
 			this.isGenerating = false;
 		}
@@ -68,27 +78,27 @@ class FunFactService {
 
 	getSourceFact(vegetable) {
 		const sourceFacts = {
-			Beetroot: 'Beetroots contain betalains, which give them their deep red color and are powerful antioxidants.',
-			Paprika: 'Red paprikas or bell peppers are actually fully ripened green peppers and are much sweeter.',
-			Cabbage: 'Cabbage can change its color to bright red when cooked with acidic ingredients like vinegar.',
-			Carrot: 'Carrots were originally purple or yellow before orange varieties became popular in the 17th century.',
-			Cauliflower: 'The head of a cauliflower is made of tightly packed undeveloped flower buds.',
-			Chilli: 'Chili peppers get their spicy heat from capsaicin, which protects them from being eaten by mammals.',
-			Corn: 'An average ear of corn always has an even number of rows, usually around 16 rows.',
-			Cucumber: 'Cucumbers are composed of about 95 percent water, making them incredibly hydrating.',
-			eggplant: 'Eggplants are technically berries and belong to the same nightshade family as tomatoes.',
-			Garlic: 'Garlic releases its strong pungent aroma only when its cells are crushed or chopped.',
-			Ginger: 'Ginger is not a root but a rhizome, an underground stem that stores nutrients for the plant.',
-			Lettuce: 'Lettuce was one of the first vegetables to be successfully grown in space by astronauts.',
-			Onion: 'Onions release a gas called syn-propanethial-S-oxide when cut, which stimulates tear glands.',
-			Peas: 'Peas are ancient vegetables that have been cultivated by humans for thousands of years.',
-			Potato: 'Potatoes were the first vegetable to be grown in space aboard the Space Shuttle Columbia.',
-			Turnip: 'Turnips are ancient root vegetables, and both the root and the green leaves are edible.',
-			Soybean: 'Soybeans are an excellent plant-based source of complete protein containing all essential amino acids.',
-			Spinach: 'Spinach is packed with iron and vitamins, though its leaves shrink significantly when cooked.'
+			Beetroot: 'Beetroots contain betalains, which give them their deep red color.',
+			Paprika: 'Red bell peppers are usually sweeter than green ones because they ripen longer.',
+			Cabbage: 'Cabbage can change color when cooked depending on the acidity of the water.',
+			Carrot: 'Orange carrots are rich in beta-carotene, which converts to vitamin A.',
+			Cauliflower: 'Cauliflower heads are made of undeveloped flower buds growing tightly.',
+			Chilli: 'The heat in chili peppers comes from a fiery chemical called capsaicin.',
+			Corn: 'Each strand of corn silk connects to exactly one kernel of corn.',
+			Cucumber: 'Cucumbers are composed of about 95 percent water, keeping you hydrated.',
+			eggplant: 'Eggplants are technically berries and cousins of tomatoes and potatoes.',
+			Garlic: 'Garlic only releases its signature strong aroma when crushed or chopped.',
+			Ginger: 'The ginger we eat is actually an underground stem called a rhizome.',
+			Lettuce: 'Romaine lettuce has sturdy leaves that keep salads extra crunchy.',
+			Onion: 'Cutting onions releases a gas that stimulates your eyes tear glands.',
+			Peas: 'Young green peas taste sweet because their sugar hasn\'t turned to starch.',
+			Potato: 'Potatoes were the first vegetable ever successfully grown in space.',
+			Turnip: 'Turnips are ancient root vegetables where both roots and leaves are edible.',
+			Soybean: 'Soybeans are loaded with excellent plant-based protein compounds.',
+			Spinach: 'Spinach leaves contain high water, making them shrink fast when cooked.'
 		};
 
-		return sourceFacts[vegetable] || `${vegetable} has a unique flavor and nutritional profile, making it a versatile ingredient in many dishes.`;
+		return sourceFacts[vegetable] || `${vegetable} has a unique flavor and profile.`;
 	}
 
 	cleanGeneratedText(text, vegetable, fallbackFact) {
@@ -96,7 +106,7 @@ class FunFactService {
 			.replace(/\s+/g, ' ')
 			.replace(/^["'`]+|["'`]+$/g, '')
 			.trim();
-
+		
 		if (!this.isGoodGeneratedText(cleanText, vegetable)) {
 			return fallbackFact;
 		}
@@ -105,17 +115,15 @@ class FunFactService {
 	}
 
 	isGoodGeneratedText(text, vegetable) {
-		if (text.length < 20 || text.length > 260) {
+		if (!text || text.length < 5) {
 			return false;
 		}
+		return true;
+	}
 
-		const words = text.toLowerCase().split(/\s+/).filter(Boolean);
-		const uniqueWords = new Set(words);
-		const repeatedWords = words.length - uniqueWords.size;
-		const vegetableWords = vegetable.toLowerCase().split(/\s+/);
-		const mentionsVegetable = vegetableWords.some(word => text.toLowerCase().includes(word));
-
-		return uniqueWords.size >= 8 && repeatedWords <= words.length * 0.4 && mentionsVegetable;
+	// TODO [Basic] Periksa apakah model siap dan tidak sedang menghasilkan fakta
+	isReady() {
+		return Boolean(this.isModelLoaded && this.generator && !this.isGenerating);
 	}
 }
 
